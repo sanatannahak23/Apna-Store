@@ -54,8 +54,14 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                     log.info("Token validated.....");
                     String role = jwtUtils.extractRole(token);
                     String userName = jwtUtils.extractUserName(token);
+                    log.info("Token validated: user={}, role={}", userName, role);
 
-                    log.info("Token and role validated: {}", role);
+                    ServerHttpRequest modifiedRequest = exchange.getRequest().mutate()
+                            .header("X-Username", userName)
+                            .header("X-Role", role)
+                            .build();
+
+                    exchange = exchange.mutate().request(modifiedRequest).build();
                 } catch (Exception ex) {
                     log.error("Invalid JWT token!!");
                     return onError(exchange, "Invalid JWT token", 401);
