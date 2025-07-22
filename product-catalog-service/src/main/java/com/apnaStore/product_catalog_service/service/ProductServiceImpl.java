@@ -129,6 +129,7 @@ public class ProductServiceImpl implements ProductService {
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException(ExceptionMessages.PRODUCT_NOT_FOUND));
+        // if i delete the product also inventory should be deleted of that product from all warehouse (kafka)
         productRepository.delete(product);
     }
 

@@ -16,4 +16,5 @@ public interface ExceptionMessages {
 
     String REFRESH_TOKEN_EXPIRED = "Refresh Token Expired";
     String INVALID_TOKEN = "Invalid Token";
+    String YOU_HAVE_ALREADY_DELETED_THIS_ACCOUNT = "You Have Already Deleted This Account";
 }

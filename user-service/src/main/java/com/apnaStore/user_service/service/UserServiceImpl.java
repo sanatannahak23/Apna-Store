@@ -129,6 +129,7 @@ public class UserServiceImpl implements UserService {
                 .toList();
     }
 
+    // Need to work on it
     @Override
     public UserResponse deleteUser(Long id) {
         User user = userRepository.findById(id)

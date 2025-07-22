@@ -18,12 +18,12 @@ public class CredentialRequest {
 
     private String password;
 
-    private Boolean isActive;
+    private Boolean isActive = Boolean.TRUE;
 
-    private Boolean isAccountNonExpired;
+    private Boolean isAccountNonExpired = Boolean.TRUE;
 
-    private Boolean isAccountNOtLocked;
+    private Boolean isAccountNOtLocked = Boolean.TRUE;
 
-    private Boolean isCredentialsNonExpired;
+    private Boolean isCredentialsNonExpired = Boolean.TRUE;
 
 }

@@ -80,6 +80,7 @@ public class CategoryServiceImpl implements CategoryService {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException(ExceptionMessages.DATA_NOT_FOUND));
         log.info("Category Deleted Successfully :: {}", category);
+        // Here if i delete the category product will delete as well and also inventory should be delete of those products.(kafka)
         categoryRepository.delete(category);
     }
 }

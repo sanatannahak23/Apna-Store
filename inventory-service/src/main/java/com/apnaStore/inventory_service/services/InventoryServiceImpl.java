@@ -58,7 +58,6 @@ public class InventoryServiceImpl implements InventoryService {
     }
 
     public ApiResponse getProductFallback(Long productId, Throwable t) {
-        System.out.println("Fallback triggered: " + t.getMessage());
         return new ApiResponse(true, null, "Fallback: " + t.getMessage());
     }
 
@@ -75,6 +74,7 @@ public class InventoryServiceImpl implements InventoryService {
     @CircuitBreaker(name = "productClient", fallbackMethod = "getProductFallback")
     public List<InventoryResponse> getInventoryByProdId(Long productId) {
         ApiResponse product = productClient.getProductById(productId);
+
         log.info("Product Detail :: {}", product);
         List<Inventory> inventories = inventoryRepository.findByProductId(productId);
         return inventories

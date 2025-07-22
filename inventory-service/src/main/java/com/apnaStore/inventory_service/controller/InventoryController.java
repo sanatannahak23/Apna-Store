@@ -73,7 +73,7 @@ public class InventoryController {
     }
 
     //    POST /api/inventories/decrease (decrease stock (order placed))
-    @PostMapping("/decrease")
+    @PutMapping("/decrease")
     public ResponseEntity<ApiResponse> decreaseStock(@RequestBody StockUpdateRequest stockUpdateRequest) {
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -83,7 +83,7 @@ public class InventoryController {
     }
 
     //    POST /api/inventories/increase (increase stock (restock or order cancel))
-    @PostMapping("/increase")
+    @PutMapping("/increase")
     public ResponseEntity<ApiResponse> increaseStock(@RequestBody StockUpdateRequest stockUpdateRequest) {
         return ResponseEntity
                 .status(HttpStatus.OK)

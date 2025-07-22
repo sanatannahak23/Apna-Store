@@ -1,5 +1,6 @@
 package com.apnaStore.API_gateway.filter;
 
+import com.apnaStore.API_gateway.enums.Role;
 import com.apnaStore.API_gateway.util.JwtUtils;
 import com.apnaStore.API_gateway.validator.RouteValidator;
 import lombok.extern.slf4j.Slf4j;
@@ -36,7 +37,6 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
 
     @Override
     public GatewayFilter apply(Config config) {
-        log.info("Gateway Auth Filter..");
         return ((exchange, chain) -> {
             if (validator.isSecured.test(exchange.getRequest())) {
                 // check header contain token or not
@@ -62,6 +62,15 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
                             .build();
 
                     exchange = exchange.mutate().request(modifiedRequest).build();
+                    ServerWebExchange finalExchange = exchange;
+                    return authorizeRequest(role, exchange)
+                            .flatMap(isAuthorized -> {
+                                if (Boolean.TRUE.equals(isAuthorized)) {
+                                    return chain.filter(finalExchange);
+                                } else {
+                                    return onError(finalExchange, "Access Denied For Role :: " + role.toUpperCase(), 403);
+                                }
+                            });
                 } catch (Exception ex) {
                     log.error("Invalid JWT token!!");
                     return onError(exchange, "Invalid JWT token", 401);
@@ -69,6 +78,56 @@ public class AuthenticationFilter extends AbstractGatewayFilterFactory<Authentic
             }
             return chain.filter(exchange);
         });
+    }
+
+    private Mono<Boolean> authorizeRequest(String role, ServerWebExchange exchange) {
+        String path = exchange.getRequest().getURI().getPath();
+        String method = exchange.getRequest().getMethod().name();
+
+        log.info("Authorizing role: {}, method: {}, path: {}", role, method, path);
+
+        if (role.equalsIgnoreCase(Role.ADMIN.getRole())) {
+            return Mono.just(true);
+        }
+
+        if (role.equalsIgnoreCase(Role.CUSTOMER.getRole())) {
+            if (path.startsWith("/api/users/address")) {
+                return Mono.just(true);
+            }
+
+            if ((method.equalsIgnoreCase("DELETE") || method.equalsIgnoreCase("PUT")) && path.matches("/api/users/\\d+$")) {
+                return Mono.just(true);
+            }
+
+
+            if (method.equalsIgnoreCase("GET") &&
+                    (path.matches("/api/users/\\d+$")
+                            || path.matches("/api/users/email/.+$")
+                            || path.matches("/api/products/?")
+                            || path.matches("/api/products/\\d+")
+                            || path.matches("/api/products/search.*")
+                            || path.matches("/api/products/category/\\d+")
+                            || path.matches("/api/products/\\d+/details")
+                            || path.matches("/api/products/categories/?")
+                            || path.matches("/api/products/categories")
+                            || path.matches("/api/products/categories/\\d+")
+                            || path.matches("/api/products/\\d+/attributes")
+                            // Inventory service
+                            || path.matches("/api/inventory/?")
+                            || path.matches("/api/inventory/\\?page=\\d+.*") // optional query params
+                            || path.matches("/api/inventory/[A-Za-z0-9\\-]+$") // inventoryId
+                            || path.matches("/api/inventory/product/\\d+")
+                            || path.matches("/api/inventory/product/\\d+/total-stock")
+                            // warehouse
+                            || path.matches("/api/inventory/warehouse/?$")
+                            || path.matches("/api/inventory/warehouse/[A-Za-z0-9\\-]+$"))) {
+                return Mono.just(true);
+            }
+
+            return Mono.just(false);
+        }
+
+        return Mono.just(false);
     }
 
     private String getToken(ServerHttpRequest request) {

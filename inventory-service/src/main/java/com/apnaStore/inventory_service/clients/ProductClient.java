@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.PathVariable;
         configuration = com.apnaStore.inventory_service.config.FeignConfig.class)
 public interface ProductClient {
 
-    // Need to work on resillence4j
     @GetMapping("/{id}")
     ApiResponse getProductById(@PathVariable("id") Long id);
 
