@@ -1,0 +1,4 @@
+2025-07-09 11:59:55 INFO  c.a.p.ProductCatalogServiceApplication - Starting ProductCatalogServiceApplication using Java 23.0.2 with PID 4320 (C:\Users\user\Desktop\java\Micro-services\ecommerce\product-catalog-service\target\classes started by user in C:\Users\user\Desktop\java\Micro-services\ecommerce\register-service)
+2025-07-09 11:59:55 INFO  c.a.p.ProductCatalogServiceApplication - No active profile set, falling back to 1 default profile: "default"
+2025-07-09 12:00:07 INFO  c.a.p.ProductCatalogServiceApplication - Started ProductCatalogServiceApplication in 12.909 seconds (process running for 13.591)
+2025-07-09 12:00:07 INFO  c.a.p.ProductCatalogServiceApplication - Application started...
