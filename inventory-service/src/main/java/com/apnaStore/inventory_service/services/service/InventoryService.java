@@ -22,6 +22,8 @@ public interface InventoryService {
 
     void removeInventory(String inventoryId);
 
+    void removeInventoryByProductId(String productId);
+
     List<InventoryResponse> getAllInventory(int page, int size, String sortBy, String sortDir);
 
 }

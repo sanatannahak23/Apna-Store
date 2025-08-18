@@ -41,5 +41,10 @@ public interface ExceptionMessages {
     String PRODUCT_ALREADY_EXIST = "Product Already Exist.";
 
     String INVALID_IMAGE_REF = "Invalid Image Reference";
+
     String FAILED_TO_DELETE_FILE = "Failed To Delete File : ";
+
+    String FILE_SIZE_EXCEED = "File Size Exceed";
+
+    String INVALID_FILE = "Invalid File";
 }

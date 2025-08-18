@@ -12,10 +12,10 @@ import org.springframework.web.multipart.MultipartFile;
         configuration = FeignMultipartSupportConfig.class)
 public interface CommonClient {
 
-    @PostMapping(value = "/upload/{productKey}",
+    @PostMapping(value = "/upload",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     ApiResponse uploadFile(
-            @PathVariable("productKey") String productKey,
+            @RequestParam String productKey,
             @RequestPart("file") MultipartFile file
     );
 

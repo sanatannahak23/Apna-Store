@@ -53,4 +53,13 @@ public class GlobalExceptionHandler {
                         null,
                         exception.getMessage()));
     }
+
+    @ExceptionHandler(exception = FileSizeException.class)
+    public ResponseEntity<ApiResponse> handleException(FileSizeException exception) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ApiResponse(Boolean.TRUE,
+                        null,
+                        exception.getMessage()));
+    }
 }

@@ -21,4 +21,6 @@ public class ProductResponse {
     private String category;
 
     private List<ProductAttributeResponse> attributes;
+
+    private List<byte[]> images;
 }

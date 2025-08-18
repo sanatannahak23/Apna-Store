@@ -15,7 +15,11 @@ public class KafkaConsumerService {
 
     @KafkaListener(topics = KafkaTopics.DELETE_INVENTORY, groupId = "my-group")
     public void consume(String message) {
-        log.info("Received message :: {}", message);
-        inventoryService.removeInventory(message);
+        try {
+            log.info("Received message :: {}", message);
+            inventoryService.removeInventoryByProductId(message);
+        } catch (Exception ex) {
+            log.error("Error while processing message: {}", message, ex);
+        }
     }
 }

@@ -21,9 +21,9 @@ public class S3Controller {
     private final S3service s3service;
 
     // upload file
-    @PostMapping("/upload/{productKey}")
+    @PostMapping("/upload")
     public ResponseEntity<ApiResponse> uploadFile(
-            @PathVariable String productKey,
+            @RequestParam String productKey,
             @RequestPart("file") MultipartFile file
     ) {
         log.info("upload api called :: {}", productKey);

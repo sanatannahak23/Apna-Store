@@ -6,8 +6,10 @@ import com.apnaStore.product_catalog_service.messages.SuccessMessages;
 import com.apnaStore.product_catalog_service.service.services.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/products")
@@ -17,12 +19,13 @@ public class ProductController {
     private final ProductService productService;
 
     //    POST /api/products (create product)
-    @PostMapping
-    public ResponseEntity<ApiResponse> createProduct(@RequestBody ProductRequest productRequest) {
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse> createProduct(@RequestPart("productRequest") ProductRequest productRequest,
+                                                     @RequestPart("file") MultipartFile[] file) {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(new ApiResponse(Boolean.FALSE,
-                        productService.createProduct(productRequest),
+                        productService.createProduct(productRequest, file),
                         SuccessMessages.PRODUCT_ADDED_SUCCESSFULLY));
     }
 

@@ -121,9 +121,19 @@ public class InventoryServiceImpl implements InventoryService {
 
     @Override
     public void removeInventory(String inventoryId) {
+        log.info("Inventory service :: {}", inventoryId);
         Inventory inventory = inventoryRepository.findById(inventoryId)
                 .orElseThrow(() -> new DataNotFoundException(ExceptionMessages.DATA_NOT_FOUND));
         inventoryRepository.delete(inventory);
+    }
+
+    @Override
+    public void removeInventoryByProductId(String productId) {
+        log.info("Inventory service :: {}", productId);
+        List<Inventory> inventories = inventoryRepository.findByProductId(Long.parseLong(productId));
+        for (Inventory inventory : inventories) {
+            removeInventory(inventory.getId());
+        }
     }
 
     @Override

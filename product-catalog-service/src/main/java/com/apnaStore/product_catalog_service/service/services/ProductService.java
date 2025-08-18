@@ -2,12 +2,13 @@ package com.apnaStore.product_catalog_service.service.services;
 
 import com.apnaStore.product_catalog_service.dto.request.ProductRequest;
 import com.apnaStore.product_catalog_service.dto.response.ProductResponse;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 public interface ProductService {
 
-    ProductResponse createProduct(ProductRequest productRequest);
+    ProductResponse createProduct(ProductRequest productRequest, MultipartFile[] file);
 
     List<ProductResponse> getAllProducts(int page, int size, String sortBy, String sortDir);
 

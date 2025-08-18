@@ -56,6 +56,7 @@ public class CategoryServiceImpl implements CategoryService {
         try {
             ApiResponse response = commonClient.uploadFile(ReferenceType.CATEGORY.toString(), file);
             log.info("Received response :: {}", response.getData() != null ? response.getData() : null);
+
             String imageRef = objectMapper.convertValue(response.getData(), String.class);
             category.setImageRef(imageRef);
         } catch (Exception ex) {
@@ -161,11 +162,13 @@ public class CategoryServiceImpl implements CategoryService {
     public void deleteCategory(Long id) {
         Category category = categoryRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException(ExceptionMessages.DATA_NOT_FOUND));
-        log.info("Category Deleted Successfully :: {}", category);
+        log.info("Category Deleted Successfully :: {}", category.getName());
 
-        // Inventory need to be delete :: kafka
-        for (Product product : category.getProducts())
+        // Inventory need to be delete :: kafka ✅
+        for (Product product : category.getProducts()) {
+            log.info("The product Id ::{}", product.getId());
             kafkaProducerService.messageForDeleteInventory(product.getId());
+        }
 
         // image should be delete from s3 ✅
         if (category.getImageRef() != null) {

@@ -1,28 +1,28 @@
 package com.apnaStore.product_catalog_service.service;
 
+import com.apnaStore.product_catalog_service.clients.CommonClient;
 import com.apnaStore.product_catalog_service.dto.request.ProductRequest;
-import com.apnaStore.product_catalog_service.dto.response.ProductAttributeResponse;
+import com.apnaStore.product_catalog_service.dto.response.ApiResponse;
 import com.apnaStore.product_catalog_service.dto.response.ProductResponse;
-import com.apnaStore.product_catalog_service.entities.Category;
-import com.apnaStore.product_catalog_service.entities.Product;
-import com.apnaStore.product_catalog_service.entities.ProductAttribute;
-import com.apnaStore.product_catalog_service.exception.DataAlreadyExist;
-import com.apnaStore.product_catalog_service.exception.DataNotFoundException;
+import com.apnaStore.product_catalog_service.entities.*;
+import com.apnaStore.product_catalog_service.entities.enums.ReferenceType;
+import com.apnaStore.product_catalog_service.exception.*;
 import com.apnaStore.product_catalog_service.helper.EntityToResponse;
 import com.apnaStore.product_catalog_service.helper.RequestToEntity;
+import com.apnaStore.product_catalog_service.kafka.KafkaProducerService;
 import com.apnaStore.product_catalog_service.messages.ExceptionMessages;
-import com.apnaStore.product_catalog_service.repository.CategoryRepository;
-import com.apnaStore.product_catalog_service.repository.ProductAttributeRepository;
-import com.apnaStore.product_catalog_service.repository.ProductRepository;
-import com.apnaStore.product_catalog_service.service.services.ProductAttributeService;
+import com.apnaStore.product_catalog_service.repository.*;
 import com.apnaStore.product_catalog_service.service.services.ProductService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
@@ -36,15 +36,31 @@ public class ProductServiceImpl implements ProductService {
 
     private final ProductAttributeRepository productAttributeRepository;
 
+    private final ProductImageRepository productImageRepository;
+
+    private final UploadFileRepository uploadFileRepository;
+
+    private final CommonClient commonClient;
+
+    private final ObjectMapper objectMapper;
+
+    private final KafkaProducerService kafkaProducerService;
+
     @Override
-    public ProductResponse createProduct(ProductRequest productRequest) {
+    public ProductResponse createProduct(ProductRequest productRequest, MultipartFile[] file) {
+        for (MultipartFile f : file) {
+            if (f.getSize() > 2 * 1024 * 1024) {
+                throw new FileSizeException(ExceptionMessages.FILE_SIZE_EXCEED + " :: " + f.getSize());
+            }
+        }
+
         productRepository.findByName(productRequest.getName())
                 .ifPresent(ex -> {
                     throw new DataAlreadyExist(ExceptionMessages.PRODUCT_ALREADY_EXIST);
                 });
         Category category = categoryRepository.findById(productRequest.getProductCategoryId())
                 .orElseThrow(() -> new DataNotFoundException(ExceptionMessages.PRODUCT_CATEGORY_NOT_FOUND));
-        log.info("The Category for the product :: {}", category);
+        log.info("The Category for the product :: {}", category.getName());
         Product product = RequestToEntity.requestToProduct(productRequest);
         product.setCategory(category);
         product = productRepository.save(product);
@@ -62,6 +78,22 @@ public class ProductServiceImpl implements ProductService {
                 })
                 .toList();
         finalProduct.setAttributes(productAttributes);
+
+        for (MultipartFile f : file) {
+            if (f.getSize() < 0) throw new FileSizeException(ExceptionMessages.INVALID_FILE + " :: " + f.getSize());
+            try {
+                ApiResponse response = commonClient.uploadFile(ReferenceType.PRODUCT.toString() + "/" + product.getName(), f);
+                log.info("Received response :: {}", response.getData() != null ? response.getData() : null);
+                String imageRef = objectMapper.convertValue(response.getData(), String.class);
+                ProductImage productImage = new ProductImage();
+                productImage.setImageRef(imageRef);
+                productImage.setProduct(product);
+                productImageRepository.save(productImage);
+            } catch (Exception ex) {
+                log.error("Exception :: {}", ex.getMessage());
+                throw new FileUploadException(ex.getMessage() + " :: " + f.getName());
+            }
+        }
         return EntityToResponse.productToResponse(product);
     }
 
@@ -75,17 +107,34 @@ public class ProductServiceImpl implements ProductService {
         if (products.isEmpty())
             throw new DataNotFoundException(ExceptionMessages.PRODUCT_NOT_FOUND);
         log.info("All data fetched successfully....");
-        return products
-                .stream()
-                .map(EntityToResponse::productToResponse)
-                .toList();
+        ArrayList<ProductResponse> productResponses = new ArrayList<>();
+        for (Product product : products) {
+            productResponses.add(getById(product.getId()));
+        }
+        return productResponses;
     }
 
     @Override
     public ProductResponse getById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException(ExceptionMessages.PRODUCT_NOT_FOUND));
-        return EntityToResponse.productToResponse(product);
+        ProductResponse response = EntityToResponse.productToResponse(product);
+        ArrayList<byte[]> bytes = new ArrayList<>();
+
+        for (ProductImage productImage : product.getImages()) {
+            try {
+                UploadedFile uploadedFile = uploadFileRepository.findByReferenceId(productImage.getImageRef())
+                        .orElseThrow(() -> new DataNotFoundException(ExceptionMessages.INVALID_IMAGE_REF));
+                byte[] byteData = commonClient.downloadFile(uploadedFile.getS3Key());
+                log.info("Byte info :: {}", byteData.length);
+                bytes.add(byteData);
+            } catch (Exception ex) {
+                log.error("Exception :: {}", ex.getMessage());
+                throw new FileDownloadException(ex.getMessage());
+            }
+        }
+        if (!bytes.isEmpty()) response.setImages(bytes);
+        return response;
     }
 
     @Override
@@ -129,7 +178,27 @@ public class ProductServiceImpl implements ProductService {
     public void deleteProduct(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new DataNotFoundException(ExceptionMessages.PRODUCT_NOT_FOUND));
+
         // if i delete the product also inventory should be deleted of that product from all warehouse (kafka)
+        log.info("The product Id ::{}", product.getId());
+        kafkaProducerService.messageForDeleteInventory(product.getId());
+
+        // Need to delete the images of the product from s3
+        for (ProductImage productImage : product.getImages()) {
+            UploadedFile uploadedFile = uploadFileRepository.findByReferenceId(productImage.getImageRef())
+                    .orElseThrow(() -> new DataNotFoundException(ExceptionMessages.INVALID_IMAGE_REF));
+
+            productImageRepository.delete(productImage);
+            log.info("Image key :: {}", uploadedFile.getS3Key());
+            try {
+                ApiResponse response = commonClient.deleteFile(uploadedFile.getS3Key());
+                String message = objectMapper.convertValue(response.getMessage(), String.class);
+                log.info(message);
+            } catch (Exception ex) {
+                log.error("Exception :: {}", ex.getMessage());
+                throw new FileException(ExceptionMessages.FAILED_TO_DELETE_FILE + ex.getMessage());
+            }
+        }
         productRepository.delete(product);
     }
 
@@ -139,10 +208,12 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new DataNotFoundException(ExceptionMessages.DATA_NOT_FOUND));
         List<Product> products = productRepository.findByCategory(category);
         if (products.isEmpty()) throw new DataNotFoundException(ExceptionMessages.PRODUCT_NOT_FOUND);
-        return products
-                .stream()
-                .map(EntityToResponse::productToResponse)
-                .toList();
+
+        ArrayList<ProductResponse> productResponses = new ArrayList<>();
+        for (Product product : products) {
+            productResponses.add(getById(product.getId()));
+        }
+        return productResponses;
     }
 
     @Override
@@ -152,9 +223,11 @@ public class ProductServiceImpl implements ProductService {
                 : Sort.by(sortBy).descending();
         Pageable pageable = PageRequest.of(page, size, sort);
         List<Product> products = productRepository.searchByNameAndCategory(pageable, search);
-        return products
-                .stream()
-                .map(EntityToResponse::productToResponse)
-                .toList();
+
+        ArrayList<ProductResponse> productResponses = new ArrayList<>();
+        for (Product product : products) {
+            productResponses.add(getById(product.getId()));
+        }
+        return productResponses;
     }
 }
