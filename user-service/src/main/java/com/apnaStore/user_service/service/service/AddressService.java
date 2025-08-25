@@ -15,4 +15,7 @@ public interface AddressService {
     void setDefaultAddress(Long addressId);
 
     List<AddressResponse> getAllAddresses(Long userId, String order, Integer size, Integer page, String sortBy);
+
+    AddressResponse getAddressById(Long addressId);
+
 }

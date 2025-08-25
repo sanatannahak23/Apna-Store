@@ -48,7 +48,7 @@ public class CartServiceImpl implements CartService {
                     throw new DataAlreadyExistException(ExceptionMessages.ALREADY_CART_EXIST);
                 });
 
-        // It's need to verify the id with user service
+        // need to verify the id with user service
         ApiResponse response;
         try {
             response = userClient.getUserById(id);
@@ -113,6 +113,10 @@ public class CartServiceImpl implements CartService {
 
         CartItem cartItem = cartItemRepository.findById(itemId)
                 .orElseThrow(() -> new DataNotFoundException(ExceptionMessages.INVALID_CART_ITEM_ID));
+
+        if (quantity == 0) {
+            return removeItem(id, itemId);
+        }
 
         List<CartItem> items = cart.getItems();
         if (items == null || items.isEmpty())

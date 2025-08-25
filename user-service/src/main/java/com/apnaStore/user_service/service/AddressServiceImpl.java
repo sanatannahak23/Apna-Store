@@ -53,6 +53,13 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
+    public AddressResponse getAddressById(Long addressId) {
+        Address address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new DataNotFound(ExceptionMessages.DATA_NOT_FOUND));
+        return EntityToResponse.addressToAddressReponse(address);
+    }
+
+    @Override
     public AddressResponse updateAddress(Long addressId, AddressRequest addressRequest) {
         Address address = addressRepository.findById(addressId)
                 .orElseThrow(() -> new DataNotFound(ExceptionMessages.DATA_NOT_FOUND));

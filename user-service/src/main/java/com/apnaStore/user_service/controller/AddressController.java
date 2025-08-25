@@ -5,6 +5,7 @@ import com.apnaStore.user_service.dto.request.AddressRequest;
 import com.apnaStore.user_service.dto.response.ApiResponse;
 import com.apnaStore.user_service.service.service.AddressService;
 import lombok.RequiredArgsConstructor;
+import org.apache.kafka.common.protocol.types.Field;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,7 +38,7 @@ public class AddressController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(new ApiResponse(Boolean.FALSE,
-                        addressService.getAllAddresses(userId,order,size,page,sortBy),
+                        addressService.getAllAddresses(userId, order, size, page, sortBy),
                         HttpMessages.DATA_FETCHED_SUCCESSFULLY));
     }
 
@@ -68,5 +69,15 @@ public class AddressController {
     public ResponseEntity<ApiResponse> setDefaultAddress(@PathVariable Long addressId) {
         addressService.setDefaultAddress(addressId);
         return ResponseEntity.ok().build();
+    }
+
+    // 6. Get address by id
+    @GetMapping("/{addressId}/get-address")
+    public ResponseEntity<ApiResponse> getAddressById(@PathVariable Long addressId) {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(new ApiResponse(Boolean.FALSE,
+                        addressService.getAddressById(addressId),
+                        HttpMessages.DATA_FETCHED_SUCCESSFULLY));
     }
 }
